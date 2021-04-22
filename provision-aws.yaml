@@ -1,0 +1,38 @@
+---
+- name: Provision infrastructure on AWS
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  tasks:
+    - name: Create cfn stack
+      cloudformation:
+        stack_name: "{{ stack_name }}"
+        region: "{{ region }}"
+        disable_rollback: true
+        state: present
+        template: ./cloudformation/k8s_template.yaml
+        template_parameters:
+          KeyName: "{{ keypair }}"
+          SSHLocation: "{{ ssh_location }}"
+          NumOfWorkers: "{{ num_of_workers }}"
+
+    - name: Get ec2 instances info
+      ec2_instance_info:
+        region: "{{ region }}"
+        filters:
+          "tag:aws:cloudformation:stack-name": "{{ stack_name }}"
+          instance-state-name: ["running"]
+      register: ec2_list
+      until: "ec2_list.instances|length == {{num_of_workers + num_of_masters}}"
+      retries: 6
+      delay: 15
+
+    - name: Add instances to inventory
+      add_host:
+        name: "{{ item.public_dns_name }}"
+        ansible_user: ubuntu
+        host_key_checking: false
+        groups:
+          - "{{item.tags.role}}"
+      no_log: true
+      loop: "{{ ec2_list['instances'] | flatten(levels=1) }}"

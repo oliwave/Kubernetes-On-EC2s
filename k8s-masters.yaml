@@ -1,0 +1,6 @@
+---
+- name: Setup master nodes 
+  hosts: masters
+  become: yes
+  roles:
+    - master

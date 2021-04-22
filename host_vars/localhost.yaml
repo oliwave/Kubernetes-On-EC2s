@@ -1,0 +1,7 @@
+---
+region: ap-east-1
+keypair: ec2
+stack_name: My-K8s-Stack-Test
+ssh_location: 0.0.0.0/0
+num_of_workers: 2
+num_of_masters: 1

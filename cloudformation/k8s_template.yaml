@@ -1,0 +1,122 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Setup Kubernetes environment on EC2 instances.
+Mappings:
+  RegionMap:
+    ap-east-1:
+      HVM64: ami-0774445f9e6290ccd # Ubuntu Server 20.04 LTS (HVM)
+  InstanceTypeMap:
+    type: 
+      master: t3.small # 2 CPU, 2 RAM
+      worker: t3.micro # 2 CPU, 1 RAM  
+Parameters:
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access
+    Type: "AWS::EC2::KeyPair::KeyName"
+  NumOfWorkers:
+    Description: Numbers of workers
+    Type: Number
+    Default: 1
+  SSHLocation:
+    Description: The IP address range that can be used to SSH to the EC2 instances.
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 0.0.0.0/0
+    AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x.
+
+Resources:
+  K8sMasterNode:
+    Type: AWS::EC2::Instance
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref EC2LauchTemplate
+        Version: !GetAtt EC2LauchTemplate.LatestVersionNumber
+      SecurityGroups:
+        - !Ref SSHSecurityGroup
+        - !Ref ControlPlaneSecurityGroup
+      InstanceType: !FindInMap [InstanceTypeMap, type, master]
+      Tags:
+        - Key: "role"
+          Value: "masters"
+        - Key: "deploy"
+          Value: "ansible"
+
+  K8sWorkerFleet:
+    Type: AWS::EC2::EC2Fleet
+    Properties:
+      ExcessCapacityTerminationPolicy: termination
+      LaunchTemplateConfigs:
+        - LaunchTemplateSpecification:
+            LaunchTemplateId: !Ref EC2LauchTemplate
+            Version: !GetAtt EC2LauchTemplate.LatestVersionNumber
+      TargetCapacitySpecification:
+        DefaultTargetCapacityType: on-demand
+        OnDemandTargetCapacity: !Ref NumOfWorkers
+        TotalTargetCapacity: !Ref NumOfWorkers
+
+  EC2LauchTemplate: # The Launch Template that will be used to deploy the test environment
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: EC2LauchTemplate
+      LaunchTemplateData:
+        ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", HVM64]
+        InstanceType: !FindInMap [InstanceTypeMap, type, worker]
+        KeyName: !Ref KeyName
+        SecurityGroups:
+          - !Ref SSHSecurityGroup
+          - !Ref WorkerPlaneSecurityGroup
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: "role"
+                Value: "workers"
+              - Key: "deploy"
+                Value: "ansible"
+        UserData:
+          Fn::Base64:
+            Fn::Sub:
+              | # Ansible requires Python and SSH to be pre-installed on the target machines.
+              #!/bin/bash -xe
+              sudo apt update -y
+              sudo apt install python3-pip -y
+              sudo apt install ssh
+              sudo pip install --upgrade pip
+              sudo pip install --upgrade setuptools
+
+  SSHSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: SSH-Security-Group
+      GroupDescription: Allow to acces with SSH
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref SSHLocation
+
+  ControlPlaneSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: Control-Plane-Security-Group
+      GroupDescription: Allow to access Control Plane.
+      SecurityGroupIngress:
+        - IpProtocol: tcp # Kubernetes API server
+          FromPort: 6443
+          ToPort: 6443
+          SourceSecurityGroupName: !Ref SSHSecurityGroup
+
+  WorkerPlaneSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: Worker-Plane-Security-Group
+      GroupDescription: Allow to access Worker Plane.
+      SecurityGroupIngress:
+        - IpProtocol: tcp # Kubelet API
+          FromPort: 10250
+          ToPort: 10250
+          SourceSecurityGroupName: !Ref SSHSecurityGroup
+        - IpProtocol: tcp # Kubelet API
+          FromPort: 30000
+          ToPort: 32767
+          SourceSecurityGroupName: !Ref SSHSecurityGroup
