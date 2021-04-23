@@ -2,7 +2,7 @@
 
 ## 問題情境
 
-在建置公有雲資源的時候通常會使用 `IaC` 的工具 (`Terraform`, `CloudFromation`) 來自動化部署和管理基礎設施，可如果像是應用程式或是套件依賴的安裝儘管在這些工具上也可以達成，但就顯得不利索。在這個範例中使用 `CloudFormation + Ansbile` 來搭配完成整個基礎設施和 Kubernetes Cluster 的自動化建置。
+在建置公有雲資源的時候通常會使用 `IaC` 的工具 (`Terraform`, `CloudFromation`) 來自動化部署和管理基礎設施，可如果像是應用程式或是套件依賴的安裝儘管在這些工具上也可以達成，但就顯得不利索。在這個範例中使用 `CloudFormation + Ansbile` 來搭配完成整個基礎設施和 Kubernetes Cluster (Control Plane with Single Master Node)的自動化建置。
 
 ## 前置作業 Prerequisites
 在工作機上安裝以下軟體：
