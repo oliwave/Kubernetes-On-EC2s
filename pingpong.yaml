@@ -1,3 +1,4 @@
+---
 - name: Check the connectivity of EC2Fleet
   hosts: all
   gather_facts: false

@@ -1,7 +1,7 @@
 ---
-region: ap-east-1
-keypair: ec2
+region: ap-east-1 # If you change the region name, you have to change the mappings in k8s_template.yaml.
+keypair: ec2 
 stack_name: My-K8s-Stack-Test
-ssh_location: 0.0.0.0/0
+ssh_location: 0.0.0.0/0 # You can strictly specify the source IP of SSH to protect your EC2.
 num_of_workers: 2
-num_of_masters: 1
+num_of_masters: 1 # This is a demo of the control plane with single master node.
