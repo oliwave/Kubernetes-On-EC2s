@@ -50,3 +50,7 @@
 5. 執行結果
 ![](https://i.imgur.com/ZsTcdrm.png)
 
+## Future Work
+- High Availability Control Plane (multi-master cluster)
+- Nodes across multi-az
+
