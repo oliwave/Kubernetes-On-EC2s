@@ -50,7 +50,7 @@
 5. 執行結果
 ![](https://i.imgur.com/ZsTcdrm.png)
 
-## Feature
+## 功能 Features
 - [X] Single master node
 - [X] Multiple worker nodes
 - [ ] High Availability Control Plane (multi-master cluster)
